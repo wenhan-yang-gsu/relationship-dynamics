@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interactive simulation of a five-state relationship dynamics model (Math 4991, Georgia State University).">
+<title>Relationship Dynamics Simulation</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #FFFFFF; --sheet: #FFFFFF; --ink: #111111; --sub: #333333; --grid: #C9C9C9; --tab: #3E9BF0; --tabtext: #0B0B0B;
+  --boxA: #2323C8; --boxB: #D42A2A; --pink: #E0257A; --stock: #2D2DB5;
+  --nr: #7D7D7D; --np: #14A06A; --rp: #E58A00; --cr: #2551E0; --m: #D6267F;
+  --f-ui: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --f-btn: "Times New Roman", Times, Georgia, serif;
+}
+body { background: var(--page); color: var(--ink); font: 16px/1.45 var(--f-ui);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 28px; }
+.sheet { max-width: 1240px; margin: 0 auto; background: var(--sheet); border: 1px solid #CFCFCF; box-shadow: 0 1px 4px rgba(0,0,0,.18); padding: 12px 18px 22px; }
+.site { max-width: 1240px; margin: 0 auto 18px; padding-block: 6px 0; }
+.site .sitename { font: 15px/1.2 var(--f-ui); color: #555; letter-spacing: .02em; padding-bottom: 14px; border-bottom: 1px solid #E2E2E2; }
+.site h1 { font: 34px/1.2 var(--f-ui); margin: 26px 0 4px; text-wrap: balance; }
+.site p { color: #444; margin: 0; }
+.after { max-width: 1240px; margin: 18px auto 0; display: grid; gap: 8px; font-size: 15px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #9A9A9A; padding: 0 4px; }
+.tabs button { font: bold 16px var(--f-ui); color: var(--tabtext); background: var(--tab); border: 1px solid #2E7FCB; border-bottom: none;
+  border-radius: 4px 4px 0 0; padding: 6px 9px 5px; cursor: pointer; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { background: var(--sheet); border-color: #9A9A9A; }
+.tabs button:focus-visible, .rbtn:focus-visible, input:focus-visible { outline: 2px solid var(--boxA); outline-offset: 2px; }
+.page { padding-top: 14px; }
+h1 { font: bold 24px/1.2 var(--f-ui); margin: 0 0 10px; }
+p { margin: 0 0 10px; max-width: 64ch; }
+.lead b i, .lead i b { font-weight: bold; font-style: italic; }
+.row { display: grid; grid-template-columns: minmax(0, 350px) minmax(0, 180px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .row { grid-template-columns: minmax(0, 1fr); } }
+.intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .intro { grid-template-columns: minmax(0, 1fr); } }
+
+/* variable boxes */
+.vbox { border: 2px solid var(--boxA); padding: 6px 10px 10px; display: grid; gap: 6px; margin-bottom: 12px; }
+.vbox.red { border-color: var(--boxB); }
+.vbox.black { border-color: var(--ink); }
+.vbox .why { font-size: 14px; text-align: center; margin: -2px 0 2px; color: #333; max-width: none; }
+.vbox.off .sl, .vbox.off .switch { opacity: .4; }
+.vbox h2 { font: bold 19px var(--f-ui); text-align: center; margin: 0 0 2px; }
+.sl { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; align-items: end; }
+.sl .cap { grid-column: 2; font: bold 14px var(--f-ui); text-align: center; }
+.sl .val { border: 1px solid #777; font: bold 15px var(--f-ui); text-align: right; padding: 2px 5px; background: #fff; height: 26px; box-sizing: border-box; font-variant-numeric: tabular-nums; }
+.sl .track { display: grid; gap: 0; min-width: 0; }
+.sl .ticks { display: flex; justify-content: space-between; font: bold 13px var(--f-ui); padding: 0 4px; }
+input[type=range] { width: 100%; accent-color: #3478F6; margin: 2px 0; }
+.radios { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px 10px; font-size: 16px; }
+.radios label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.sw { width: 10px; height: 10px; display: inline-block; }
+.switch { display: flex; gap: 14px; justify-content: center; font-size: 16px; }
+.switch label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+
+/* run buttons */
+.runbox { display: flex; gap: 10px; justify-content: center; padding-top: 40px; flex-wrap: wrap; }
+@media (max-width: 900px) { .runbox { padding-top: 0; } }
+.rbtn { display: grid; justify-items: center; gap: 4px; background: none; border: none; cursor: pointer; font: bold 18px var(--f-btn); color: var(--ink); padding: 0; }
+.rbtn .ball { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 3px rgba(0,0,0,.35), inset 0 -3px 6px rgba(0,0,0,.25); }
+.rbtn .ball svg { width: 18px; height: 18px; }
+.rbtn.go .ball { background: radial-gradient(circle at 50% 30%, #8FE08A, #1E9B2E 60%, #11661C); }
+.rbtn.live .ball { background: radial-gradient(circle at 50% 30%, #8FC0FF, #1E62D8 60%, #123C8C); }
+.rbtn.reset .ball { background: radial-gradient(circle at 50% 30%, #FFC58A, #F07A12 60%, #A74A05); }
+.rbtn:active .ball { transform: translateY(1px); }
+.timebox { display: grid; gap: 4px; justify-items: center; margin-top: 18px; font: bold 15px var(--f-ui); }
+.timebox input { width: 130px; }
+.tread { font: bold 15px var(--f-ui); font-variant-numeric: tabular-nums; }
+
+/* graph pad */
+.pad { border: 1px solid #9A9A9A; background: #fff; padding: 6px 6px 4px; position: relative; min-width: 0; }
+.pad svg { width: 100%; height: auto; display: block; }
+.pad .pg { position: absolute; right: 8px; top: 6px; font: 13px var(--f-ui); color: var(--sub); }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; font: bold 14px var(--f-ui); padding: 2px 0 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 26px; height: 3px; display: inline-block; }
+.timeline { display: flex; align-items: center; gap: 10px; margin-top: 8px; font: bold 16px var(--f-ui); }
+.timeline input { flex: 1; min-width: 0; }
+
+/* population tanks */
+.tanks { margin-top: 12px; }
+.pad.tanks .pg { position: static; display: block; text-align: right; }
+.tanks canvas { width: 100%; height: 230px; display: block; }
+.predict { font-size: 16px; margin-top: 12px; }
+
+/* stock-and-flow */
+.sfd { overflow-x: auto; }
+.sfd svg { width: 100%; min-width: 760px; height: auto; display: block; }
+.sdtop { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 760px) { .sdtop { grid-template-columns: minmax(0, 1fr); } }
+.sdctl { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+
+/* equations + tables */
+.eq { font: 16px/1.8 "Times New Roman", Times, serif; background: #F7F7FD; border-left: 3px solid var(--boxA); padding: 8px 12px; margin: 6px 0 12px; overflow-x: auto; }
+.tbl { overflow-x: auto; margin-bottom: 12px; }
+table { border-collapse: collapse; font-size: 15px; }
+th, td { border: 1px solid #B9B9B9; padding: 4px 8px; text-align: left; white-space: nowrap; }
+th { background: #EDEFFA; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; }
+h3 { font: bold 18px var(--f-ui); margin: 14px 0 6px; }
+.refs li { margin-bottom: 8px; max-width: 80ch; }
+.foot { max-width: 1240px; margin: 10px auto 0; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--sub); }
+@media (prefers-reduced-motion: reduce) { .rbtn:active .ball { transform: none; } }
+[hidden]{display:none!important}
+body{margin:0}
+</style>
+
+</head>
+<body>
+<header class="site">
+  <div class="sitename">Relationship Dynamics · Math 4991 · Georgia State University</div>
+  <h1>Relationship Dynamics Simulation of a Five-State Markov Model</h1>
+  <p>Wenhan Yang and Zhiyu Liu · Advisor: Professor Yi Jiang</p>
+</header>
+<div class="sheet">
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" id="tab-intro" aria-selected="true">Introduction</button>
+    <button role="tab" id="tab-sim" aria-selected="false">Simulation</button>
+    <button role="tab" id="tab-sd" aria-selected="false">System Dynamics Model</button>
+    <button role="tab" id="tab-markov" aria-selected="false">Markov Model</button>
+    <button role="tab" id="tab-refs" aria-selected="false">References</button>
+  </div>
+
+  <!-- ===================== INTRODUCTION ===================== -->
+  <section class="page" id="page-intro">
+    <div class="intro">
+      <div>
+        <h1>Where is a relationship going?</h1>
+        <p>Two people can have no tie, be friends, have romantic potential, be a couple, or be married. Relationships change in both directions over time: friends drift apart, couples break up, and some couples marry.</p>
+        <p>We model these five states in the way that a predator–prey or SIR model treats populations. Each arrow is a transition with a <b>rate</b>, the expected number of such transitions per year. We estimated the rates from two longitudinal surveys that cover different stages of a relationship. One followed 208 college freshmen, who reported on new acquaintances every three weeks; the other followed 3,009 American couples from 2009 to 2017.</p>
+        <p>The traits of a pair shift these rates, because mutual interest, cohabitation, years together and relationship quality each speed up some transitions and slow down others. The Simulation page lets you change these traits and watch the resulting trajectories.</p>
+        <div class="pad" style="margin-top:16px"><svg class="graph" viewBox="0 0 560 270"></svg><div class="legend"></div></div>
+      </div>
+      <div>
+        <svg id="loop" viewBox="0 0 560 330" role="img" aria-label="Five relationship states connected by arrows in both directions"></svg>
+        <div class="runbox" style="padding-top:6px">
+          <button class="rbtn go" data-act="run"><span class="ball"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="#fff"/></svg></span>Run</button>
+          <button class="rbtn live" data-act="live"><span class="ball"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="#fff"/></svg></span>Live</button>
+          <button class="rbtn reset" data-act="reset"><span class="ball"><svg viewBox="0 0 20 20"><path d="M10 4a6 6 0 1 1-5.6 3.8" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M2 4.5l3 3.8 3.6-2.6z" fill="#fff"/></svg></span>Reset</button>
+        </div>
+              </div>
+    </div>
+  </section>
+
+  <!-- ===================== SIMULATION ===================== -->
+  <section class="page" id="page-sim" hidden>
+    <p class="lead"><b><i>Play</i></b> with the traits that speed up or slow down each transition between relationship states.<br><b><i>Change</i></b> the starting state and the traits, then <b><i>run</i></b> simulations.</p>
+    <div class="row">
+      <div>
+        <div class="vbox black">
+          <h2>Starting state</h2>
+          <div class="radios" id="starts"></div>
+        </div>
+        <div class="vbox" id="box-early">
+          <h2>Getting together</h2>
+          <p class="why" id="why-early"></p>
+        </div>
+        <div class="vbox red" id="box-late">
+          <h2>Staying together</h2>
+          <p class="why" id="why-late"></p>
+          <div class="switch"><b style="font-size:12px">Living together</b>
+            <label><input type="radio" name="cohab" id="cohab-yes" value="1" checked> yes</label>
+            <label><input type="radio" name="cohab" id="cohab-no" value="0"> no</label>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="runbox">
+          <button class="rbtn go" data-act="run"><span class="ball"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="#fff"/></svg></span>Run</button>
+          <button class="rbtn live" data-act="live"><span class="ball"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="#fff"/></svg></span>Live</button>
+          <button class="rbtn reset" data-act="reset"><span class="ball"><svg viewBox="0 0 20 20"><path d="M10 4a6 6 0 1 1-5.6 3.8" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M2 4.5l3 3.8 3.6-2.6z" fill="#fff"/></svg></span>Reset</button>
+        </div>
+        <div class="timebox">Speed (years / s)
+          <input type="range" id="speed" min="0.25" max="3" step="0.25" value="0.5">
+          <span class="tread" id="speed-out">0.5</span>
+        </div>
+      </div>
+      <div>
+        <div class="pad"><svg class="graph" viewBox="0 0 560 300"></svg><div class="legend"></div></div>
+        <div class="timeline"><label for="time">Time</label><input type="range" id="time" min="0" max="10" step="0.05" value="0"><span class="tread" id="time-out">0.0 yr</span></div>
+        <div class="pad tanks"><span class="pg">400 simulated pairs</span><canvas id="tanks" aria-label="400 simulated pairs in five state tanks"></canvas></div>
+        <p class="predict"><b><i>Predict</i></b> what share of these pairs will be married after 10 years before you press Run. Then change one trait at a time and see which one shifts the curves most.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SYSTEM DYNAMICS ===================== -->
+  <section class="page" id="page-sd" hidden>
+    <div class="sdtop">
+      <div>
+        <p>This page draws the same model as stocks and flows. Each box (stock) holds the share of pairs in one state. Each pipe (flow) carries pairs from one box to another at a rate times the box it drains, for example <i>dating = q<sub>RP→CR</sub> × RP</i>.</p>
+        <p>A box grows with its inflows and shrinks with its outflows. Unlike a population model, no pairs are added, so the five shares always sum to 100%. The rates follow the traits set on the Simulation page.</p>
+        <div class="sdctl">
+          <button class="rbtn go" data-act="run"><span class="ball"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="#fff"/></svg></span>Run</button>
+          <button class="rbtn live" data-act="live"><span class="ball"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="#fff"/></svg></span>Live</button>
+          <button class="rbtn reset" data-act="reset"><span class="ball"><svg viewBox="0 0 20 20"><path d="M10 4a6 6 0 1 1-5.6 3.8" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M2 4.5l3 3.8 3.6-2.6z" fill="#fff"/></svg></span>Reset</button>
+          <div class="timebox" style="margin:0">Time slider<input type="range" id="time2" min="0" max="10" step="0.05" value="0"><span class="tread" id="time2-out">0.0 yr</span></div>
+          <div class="timebox" style="margin:0">Speed (years / s)<input type="range" id="speed2" min="0.25" max="3" step="0.25" value="0.5"><span class="tread" id="speed2-out">0.5</span></div>
+        </div>
+      </div>
+      <div class="pad"><svg class="graph" viewBox="0 0 560 250"></svg><div class="legend"></div></div>
+    </div>
+    <div class="sfd"><svg id="sfd" viewBox="0 0 1040 400" role="img" aria-label="Stock and flow diagram of five relationship states"></svg></div>
+  </section>
+
+  <!-- ===================== MARKOV MODEL ===================== -->
+  <section class="page" id="page-markov" hidden>
+    <h1>The continuous-time Markov model</h1>
+    <p>The rate of the transition from state <i>i</i> to state <i>j</i> depends on the traits <i>x</i> of the pair. Traits are standardized, so 0 corresponds to an average pair. An increase of one standard deviation in trait <i>k</i> multiplies the rate by e<sup>β</sup>.</p>
+    <div class="eq">q<sub>i→j</sub>(x) = exp( α<sub>ij</sub> + Σ<sub>k</sub> β<sub>ijk</sub> x<sub>k</sub> )</div>
+    <p>Together, all rates form the generator matrix <b>Q</b> of the Markov chain. Each diagonal entry equals minus the total rate of leaving that state, so every row sums to zero. The state probabilities <b>P</b>(t) satisfy a linear differential equation whose solution is a matrix exponential:</p>
+    <div class="eq">dP/dt = P·Q &nbsp;&nbsp;&nbsp;⇒&nbsp;&nbsp;&nbsp; P(t) = P(0)·e<sup>Qt</sup></div>
+    <p>We estimated α and β by maximum likelihood from 13,680 observed transitions, with a penalty λ on β selected by 5-fold cross-validation. A trait enters a transition only when the training data contain enough variation in that trait and enough examples of that transition. This rule retained 113 of the 288 possible trait effects on transitions.</p>
+    <h3>Base rates for an average pair (per year)</h3>
+    <div class="tbl"><table id="base"></table></div>
+    <h3>Largest trait effects</h3>
+    <div class="tbl"><table>
+      <tr><th>Trait (+1 SD)</th><th>Transition</th><th>β</th><th>Rate ×</th></tr>
+      <tr><td>Relationship quality</td><td>couple → married</td><td class="n">+0.51</td><td class="n">1.66</td></tr>
+      <tr><td>Relationship quality</td><td>married → no tie</td><td class="n">−0.55</td><td class="n">0.58</td></tr>
+      <tr><td>Years together</td><td>couple → no tie</td><td class="n">−0.54</td><td class="n">0.59</td></tr>
+      <tr><td>Own romantic interest</td><td>friends → potential</td><td class="n">+0.44</td><td class="n">1.55</td></tr>
+      <tr><td>Age</td><td>couple → married</td><td class="n">−0.34</td><td class="n">0.71</td></tr>
+      <tr><td>Education</td><td>couple → married</td><td class="n">+0.27</td><td class="n">1.31</td></tr>
+      <tr><td>Living together</td><td>couple → married</td><td class="n">+0.26</td><td class="n">1.30</td></tr>
+    </table></div>
+    <h3>Predictive performance (571 test people, 2,685 transitions)</h3>
+    <div class="tbl"><table>
+      <tr><th>Model</th><th>Log loss (lower is better)</th></tr>
+      <tr><td><b>Dynamic model with traits (this page)</b></td><td class="n"><b>0.405</b></td></tr>
+      <tr><td>Multinomial logistic regression, all traits</td><td class="n">0.409</td></tr>
+      <tr><td>Gradient boosting, all traits</td><td class="n">0.417</td></tr>
+      <tr><td>Group dynamic model, no traits</td><td class="n">0.456</td></tr>
+      <tr><td>Frequency baseline</td><td class="n">0.466</td></tr>
+    </table></div>
+    <p style="font-size:14px;color:var(--sub)">Pairs that start with no tie, as friends or with potential follow the college study, in which a breakup can lead back to friendship. Pairs that start as a couple or married follow the couples survey, in which a breakup is recorded as no tie. The curves describe the average pair with the chosen traits, not any individual couple.</p>
+  </section>
+
+  <!-- ===================== REFERENCES ===================== -->
+  <section class="page" id="page-refs" hidden>
+    <h1>References</h1>
+    <ol class="refs">
+      <li>Eastwick, P. W., Joel, S., Carswell, K. L., Molden, D. C., Finkel, E. J., &amp; Blozis, S. A. (2023). Predicting romantic interest during early relationship development: A preregistered investigation using machine learning. <i>European Journal of Personality</i>, 37(3).</li>
+      <li>Rosenfeld, M. J., Thomas, R. J., &amp; Falcon, M. (2018). <i>How Couples Meet and Stay Together, Waves 1–3 (v3.04), plus Wave 4–6 supplements</i>. Stanford University Libraries.</li>
+      <li>Lotka, A. J. (1925). <i>Elements of Physical Biology</i>. Williams &amp; Wilkins.</li>
+      <li>Volterra, V. (1926). Fluctuations in the abundance of a species considered mathematically. <i>Nature</i>, 118, 558–560.</li>
+      <li>Kermack, W. O., &amp; McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. <i>Proceedings of the Royal Society A</i>, 115, 700–721.</li>
+      <li>Putter, H., Fiocco, M., &amp; Geskus, R. B. (2007). Tutorial in biostatistics: competing risks and multi-state models. <i>Statistics in Medicine</i>, 26, 2389–2430.</li>
+    </ol>
+    <p>The page layout follows classic system dynamics teaching simulations such as Jon Darkow's <a href="https://sites.google.com/site/biologydarkow/ecology/predator-prey-simulation-of-the-lotka-volterra-model" target="_blank" rel="noopener">predator–prey simulation</a>.</p>
+  </section>
+</div>
+<div class="after">
+  <p style="margin:0">Run plays ten years, Live pauses and resumes, and Reset returns to year 0; the page also works on phones.</p>
+  <p style="margin:0;color:#555;font-size:14px">© 2026 Wenhan Yang and Zhiyu Liu. Data and code: <a href="https://github.com/wenhan-yang-gsu/relationship-dynamics" target="_blank" rel="noopener">github.com/wenhan-yang-gsu/relationship-dynamics</a></p>
+</div>
+
+<script>
+const MODEL={"states":["NR","NP","RP","CR","M","D","NRe"],"edges":[["NR","NP"],["NR","RP"],["NR","CR"],["NP","NR"],["NP","RP"],["NP","CR"],["RP","NR"],["RP","NP"],["RP","CR"],["CR","NRe"],["CR","NP"],["CR","RP"],["CR","M"],["CR","D"],["M","NRe"],["M","D"]],"alpha":[1.44805,-0.36529,-3.86874,-0.02752,1.26884,-4.13651,-0.50355,1.94407,-1.72498,-3.00846,-0.10194,-0.12215,-2.30309,-5.18782,-4.23739,-5.81623],"g":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-13.40887,-13.37727,0.0,0.0,0.0,0.0],"names":["cohabiting","romantic_years","known_years","rel_quality","interest_self","age","interest_partner_perceived","trust","commitment","income","same_sex","edu_years","satisfaction","female","extraversion","partner_edu_years","see_regularly","open_up"],"stats":{"cohabiting":[0.87015,0.33614],"romantic_years":[2.72857,0.85019],"known_years":[2.80316,0.84043],"rel_quality":[4.49927,0.7014],"interest_self":[3.90993,1.86818],"age":[34.94742,18.54019],"interest_partner_perceived":[3.8594,1.56193],"trust":[4.68263,1.36184],"commitment":[4.46601,1.54024],"income":[12.49291,3.72752],"same_sex":[0.08295,0.2758],"edu_years":[14.08269,2.5683],"satisfaction":[3.74538,1.60177],"female":[0.55025,0.49747],"extraversion":[5.51926,1.73428],"partner_edu_years":[14.13983,2.47828],"see_regularly":[3.91373,1.65033],"open_up":[4.16018,1.58175]},"B":[[0.0,0.0,0.0,0.0,0.09092,0.0,0.01097,0.12277,0.06939,0.0,0.0,0.0,0.01921,-0.17337,0.16926,0.0,-0.07352,-0.03826],[0.0,0.0,0.0,0.0,0.13358,0.0,0.02199,0.01438,0.00112,0.0,0.0,0.0,0.03336,-0.05702,0.01052,0.0,-0.00195,0.0012],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,-0.04589,0.0,0.05903,-0.22627,-0.19774,0.0,0.0,0.0,-0.2663,-0.13555,-0.04104,0.0,-0.04879,-0.08067],[0.0,0.0,0.0,0.0,0.43629,0.0,0.28022,-0.171,0.04928,0.0,0.0,0.0,0.02115,-0.13997,0.20612,0.0,-0.0289,0.03903],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,-0.04665,0.0,-0.03763,-0.12945,-0.11689,0.0,0.0,0.0,-0.00559,0.02338,-0.06652,0.0,-0.0258,-0.09229],[0.0,0.0,0.0,0.0,-0.3304,0.0,-0.28655,0.10625,0.05415,0.0,0.0,0.0,0.08,0.08081,0.21371,0.0,0.01068,-0.09031],[0.0,0.0,0.0,0.0,0.16732,0.0,0.16219,0.18333,0.16592,0.0,0.0,0.0,0.12331,0.10309,-0.01572,0.0,0.17261,0.14446],[-0.3141,-0.53535,-0.02445,-0.31615,0.0,-0.09571,0.0,0.0,0.0,-0.02311,0.11255,-0.13894,0.0,0.02707,0.0,-0.11687,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.26483,0.04151,-0.14022,0.50927,0.0,-0.34348,0.0,0.0,0.0,0.18688,-0.30119,0.26747,0.0,-0.0464,0.0,0.17177,0.0,0.0],[-0.21746,0.1557,0.00891,-0.08491,0.0,0.38272,0.0,0.0,0.0,-0.35954,-0.02495,-0.15012,0.0,-0.00106,0.0,0.138,0.0,0.0],[-0.55268,-0.49483,-0.30433,-0.54819,0.0,-0.08576,0.0,0.0,0.0,0.05821,0.10062,-0.15015,0.0,0.08352,0.0,0.08182,0.0,0.0],[-0.68855,0.2955,0.26022,-0.03299,0.0,0.59418,0.0,0.0,0.0,-0.22991,0.0038,-0.03115,0.0,0.28398,0.0,-0.2389,0.0,0.0]]};
+
+const $ = id => document.getElementById(id);
+const DISP = ["NR", "NP", "RP", "CR", "M"];
+const NAME = { NR: "No tie", NP: "Friends", RP: "Potential", CR: "Couple", M: "Married" };
+const COL = { NR: "#7D7D7D", NP: "#14A06A", RP: "#E58A00", CR: "#2551E0", M: "#D6267F" };
+const SI = Object.fromEntries(MODEL.states.map((s, i) => [s, i]));
+const D_OF = i => { const s = MODEL.states[i]; return (s === "D" || s === "NRe") ? 0 : DISP.indexOf(s); };
+const QUAL = ["", "very poor", "poor", "fair", "good", "excellent"];
+const SL = {
+  early: [
+    { id: "interest_self", cap: "Own romantic interest (1–7)", min: 1, max: 7, step: 1, def: 4, ticks: [1, 2, 3, 4, 5, 6, 7] },
+    { id: "interest_partner_perceived", cap: "Partner's interest, as seen (1–7)", min: 1, max: 7, step: 1, def: 4, ticks: [1, 2, 3, 4, 5, 6, 7] },
+    { id: "trust", cap: "Trust (1–7)", min: 1, max: 7, step: 1, def: 5, ticks: [1, 2, 3, 4, 5, 6, 7] },
+    { id: "commitment", cap: "Commitment (1–7)", min: 1, max: 7, step: 1, def: 5, ticks: [1, 2, 3, 4, 5, 6, 7] },
+  ],
+  late: [
+    { id: "romantic_years", cap: "Years together", min: 0, max: 30, step: 0.5, def: 3, ticks: [0, 10, 20, 30] },
+    { id: "rel_quality", cap: "Relationship quality (1 very poor – 5 excellent)", min: 1, max: 5, step: 1, def: 4, ticks: [1, 2, 3, 4, 5] },
+    { id: "age", cap: "Age", min: 18, max: 80, step: 1, def: 30, ticks: [18, 40, 60, 80] },
+    { id: "edu_years", cap: "Years of education", min: 8, max: 20, step: 1, def: 14, ticks: [8, 12, 16, 20] },
+  ],
+};
+const S = { start: "CR", cohab: 1, v: {}, t: 0, shown: 0, live: false, speed: 1 };
+
+/* ---------------- model ---------------- */
+function traits() {
+  const x = new Array(MODEL.names.length).fill(0), v = S.v;
+  const set = (n, raw) => { x[MODEL.names.indexOf(n)] = (raw - MODEL.stats[n][0]) / MODEL.stats[n][1]; };
+  if (!coupleStart()) {   // early stages: only the college-study traits apply; a future couple is taken as average
+    set("interest_self", v.interest_self); set("interest_partner_perceived", v.interest_partner_perceived);
+    set("trust", v.trust); set("commitment", v.commitment);
+  } else {                // couples and marriages: only the couples-survey traits apply
+    set("romantic_years", Math.log1p(v.romantic_years)); set("known_years", Math.log1p(v.romantic_years));
+    set("rel_quality", v.rel_quality); set("age", v.age); set("edu_years", v.edu_years); set("cohabiting", S.cohab);
+  }
+  return x;
+}
+const coupleStart = () => S.start === "CR" || S.start === "M";
+const hFlag = () => coupleStart() ? 1 : 0;
+function syncBoxes() {
+  const c = coupleStart();
+  $("box-early").classList.toggle("off", c); $("box-late").classList.toggle("off", !c);
+  document.querySelectorAll("#box-early input").forEach(i => i.disabled = c);
+  document.querySelectorAll("#box-late input").forEach(i => i.disabled = !c);
+  $("why-early").textContent = c ? "Not used: these traits describe pairs before they become a couple." : "Used for pairs with no tie, friends or potential.";
+  $("why-late").textContent = c ? "Used for couples and married pairs." : "Not used yet: the pair is not a couple, so an average couple is assumed if they get together.";
+}
+function rates(x, h) {
+  return MODEL.edges.map((e, k) => { let a = MODEL.alpha[k] + h * MODEL.g[k]; for (let j = 0; j < x.length; j++) a += MODEL.B[k][j] * x[j]; return Math.exp(Math.max(-20, Math.min(6, a))); });
+}
+function genQ(q) { const n = 7, Q = Array.from({ length: n }, () => new Array(n).fill(0));
+  MODEL.edges.forEach((e, k) => { const a = SI[e[0]], b = SI[e[1]]; Q[a][b] += q[k]; Q[a][a] -= q[k]; }); return Q; }
+function mm(A, B) { const n = A.length, C = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) for (let k = 0; k < n; k++) { const a = A[i][k]; if (a) for (let j = 0; j < n; j++) C[i][j] += a * B[k][j]; } return C; }
+function expm(Q, t) { const n = Q.length; let nrm = 0; for (const r of Q) nrm = Math.max(nrm, r.reduce((s, v) => s + Math.abs(v), 0) * t);
+  const sq = Math.max(0, Math.ceil(Math.log2(nrm + 1e-12)) + 4), A = Q.map(r => r.map(v => v * t / 2 ** sq));
+  let E = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => +(i === j))), T = E;
+  for (let k = 1; k <= 12; k++) { T = mm(T, A).map(r => r.map(v => v / k)); E = E.map((r, i) => r.map((v, j) => v + T[i][j])); }
+  for (let s = 0; s < sq; s++) E = mm(E, E); return E; }
+
+const YEARS = 10, STEP = 0.05, NP_ = 400;
+let Q, q, curve = [], paths = [];
+function recompute() {
+  q = rates(traits(), hFlag()); Q = genQ(q);
+  const E = expm(Q, STEP); let p = new Array(7).fill(0); p[SI[S.start]] = 1; curve = [];
+  for (let k = 0; k <= YEARS / STEP; k++) { const d = [0, 0, 0, 0, 0]; p.forEach((v, i) => d[D_OF(i)] += v); curve.push(d);
+    p = p.map((_, j) => p.reduce((s, v, i) => s + v * E[i][j], 0)); }
+  simulatePaths(); render();
+}
+/* exact random paths (Gillespie) for the 400 pairs, so the time slider can scrub back and forth */
+function simulatePaths() {
+  let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  paths = [];
+  for (let n = 0; n < NP_; n++) {
+    let s = SI[S.start], t = 0; const path = [[0, s]];
+    while (true) { const out = -Q[s][s]; if (out <= 0) break;
+      t += -Math.log(1 - rnd()) / out; if (t > YEARS) break;
+      let u = rnd() * out, j = 0; for (j = 0; j < 7; j++) { if (j === s) continue; u -= Q[s][j]; if (u <= 0) break; }
+      if (j >= 7) break; s = j; path.push([t, s]); }
+    paths.push({ path, slot: (n * 0.6180339887) % 1 });
+  }
+}
+const stateAt = (pp, t) => { let s = pp.path[0][1]; for (const [tt, ss] of pp.path) { if (tt <= t) s = ss; else break; } return D_OF(s); };
+const pAt = t => curve[Math.min(curve.length - 1, Math.round(t / STEP))];
+
+/* ---------------- graph pads ---------------- */
+function drawGraph(svg) {
+  const cw = svg.getBoundingClientRect().width; if (!svg.dataset.h) svg.dataset.h = svg.viewBox.baseVal.height;
+  if (cw > 0) svg.setAttribute("viewBox", `0 0 ${Math.round(Math.max(340, Math.min(700, cw)))} ${svg.dataset.h}`);
+  const vb = svg.viewBox.baseVal, W = vb.width, H = vb.height, L = 62, R = 18, T = 34, Bm = 46;
+  const x = t => L + (W - L - R) * t / YEARS, y = v => T + (H - T - Bm) * (1 - v);
+  let s = `<text x="${W / 2}" y="18" text-anchor="middle" font-weight="bold" font-size="17" fill="#111">Relationship states over time</text>`;
+  s += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - Bm}" fill="#fff" stroke="#888"/>`;
+  for (let k = 1; k < 4; k++) s += `<line x1="${L}" x2="${W - R}" y1="${y(k / 4)}" y2="${y(k / 4)}" stroke="#C9C9C9"/>`;
+  for (let k = 1; k < 4; k++) { const tx = x(k * 2.5); s += `<line x1="${tx}" x2="${tx}" y1="${T}" y2="${H - Bm}" stroke="#C9C9C9"/>`; }
+  for (const v of [0, 0.5, 1]) s += `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="13" font-weight="bold" fill="#111">${v * 100}%</text>`;
+  for (const t of [0, 2.5, 5, 7.5, 10]) s += `<text x="${x(t)}" y="${H - Bm + 14}" text-anchor="middle" font-size="13" font-weight="bold" fill="#111">${t}</text>`;
+  s += `<text x="${W / 2}" y="${H - Bm + 30}" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">Years</text>`;
+  s += `<text transform="translate(14 ${(T + H - Bm) / 2}) rotate(-90)" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">Share of pairs</text>`;
+  const kmax = Math.round(S.shown / STEP);
+  if (kmax > 0) DISP.forEach((st, i) => {
+    const d = curve.slice(0, kmax + 1).map((p, k) => `${k ? "L" : "M"}${x(k * STEP).toFixed(1)},${y(p[i]).toFixed(1)}`).join("");
+    s += `<path d="${d}" fill="none" stroke="${COL[st]}" stroke-width="2.4"/>`;
+    const lk = Math.max(1, Math.round(kmax * (0.25 + 0.13 * i)));      // Stella-style numbered line labels
+    s += `<text x="${x(lk * STEP)}" y="${y(curve[lk][i]) - 4}" font-size="13" font-weight="bold" fill="${COL[st]}" text-anchor="middle">${i + 1}</text>`;
+  });
+  if (S.t > 0 && S.t < YEARS) s += `<line x1="${x(S.t)}" x2="${x(S.t)}" y1="${T}" y2="${H - Bm}" stroke="#111" stroke-dasharray="3 3"/>`;
+  svg.innerHTML = s;
+}
+function drawLegends() {
+  document.querySelectorAll(".legend").forEach(l => { l.innerHTML = DISP.map((s, i) => `<span><i style="background:${COL[s]}"></i>${i + 1}: ${NAME[s]}</span>`).join(""); });
+}
+
+/* ---------------- intro loop diagram ---------------- */
+function drawLoop() {
+  const P = { NR: [68, 165], NP: [190, 52], RP: [370, 52], CR: [492, 165], M: [280, 268] };
+  const arrow = (a, b, bend, w) => { const [x1, y1] = P[a], [x2, y2] = P[b], mx = (x1 + x2) / 2 + bend[0], my = (y1 + y2) / 2 + bend[1];
+    return `<path d="M${x1},${y1} Q${mx},${my} ${x2},${y2}" fill="none" stroke="#111" stroke-width="${w}" marker-end="url(#ah)"/>`; };
+  let s = `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#111"/></marker></defs>`;
+  const short = (a, b) => { const [x1, y1] = P[a], [x2, y2] = P[b], d = Math.hypot(x2 - x1, y2 - y1), r = 46; return [[x1 + (x2 - x1) * r / d, y1 + (y2 - y1) * r / d], [x2 - (x2 - x1) * r / d, y2 - (y2 - y1) * r / d]]; };
+  const arr = (a, b, side, w) => { const [[x1, y1], [x2, y2]] = short(a, b); const nx = -(y2 - y1), ny = x2 - x1, n = Math.hypot(nx, ny);
+    const mx = (x1 + x2) / 2 + side * 16 * nx / n, my = (y1 + y2) / 2 + side * 16 * ny / n;
+    return `<path d="M${x1},${y1} Q${mx},${my} ${x2},${y2}" fill="none" stroke="#111" stroke-width="${w}" marker-end="url(#ah)"/>`; };
+  [["NR","NP",1,3],["NP","NR",1,2],["NP","RP",1,3],["RP","NP",1,2],["RP","CR",1,3],["CR","RP",1,1.4],["CR","M",1,3],["M","NR",1,1.8],["CR","NR",1,1.8]]
+    .forEach(([a, b, sd, w]) => s += arr(a, b, sd, w));
+  DISP.forEach(st => { const [x, y] = P[st];
+    s += `<circle cx="${x}" cy="${y}" r="44" fill="${COL[st]}"/><text x="${x}" y="${y - 2}" text-anchor="middle" font-size="18" font-weight="bold" fill="#fff">${st}</text><text x="${x}" y="${y + 16}" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">${NAME[st]}</text>`; });
+  s += `<text x="560" y="324" text-anchor="end" font-size="13" fill="#333">Transitions run in both directions.</text>`;
+  $("loop").innerHTML = s;
+}
+
+/* ---------------- tanks (population view) ---------------- */
+const cv = $("tanks"), ctx = cv.getContext("2d"); let TW = 0, TH = 0, dots = [];
+function sizeTanks() { const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1; if (!r.width) return;
+  TW = r.width; TH = r.height; cv.width = Math.round(TW * dpr); cv.height = Math.round(TH * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); placeDots(true); }
+function tankRect(i) { const gap = 12, w = (TW - gap * 6) / 5; return { x: gap + i * (w + gap), y: 34, w, h: TH - 46 }; }
+function placeDots(snap) {
+  if (!TW) return; const groups = [[], [], [], [], []];
+  paths.forEach((pp, n) => { if (!dots[n]) dots[n] = { x: 0, y: 0, tx: 0, ty: 0, s: 0 }; const s = stateAt(pp, S.t); dots[n].s = s; groups[s].push(n); });
+  groups.forEach((g, i) => { const r = tankRect(i), cell = Math.min(8, Math.sqrt((r.w - 6) * (r.h - 6) / NP_)), cols = Math.max(1, Math.floor((r.w - 6) / cell));
+    g.sort((a, b) => paths[a].slot - paths[b].slot);
+    g.forEach((n, k) => { const d = dots[n]; d.tx = r.x + 3 + cell / 2 + (k % cols) * cell; d.ty = r.y + r.h - 3 - cell / 2 - Math.floor(k / cols) * cell; d.r = cell * 0.38; if (snap) { d.x = d.tx; d.y = d.ty; } }); });
+}
+function drawTanks(dt) {
+  if (!TW) return; ctx.clearRect(0, 0, TW, TH); const counts = [0, 0, 0, 0, 0]; dots.forEach(d => counts[d.s]++);
+  DISP.forEach((st, i) => { const r = tankRect(i);
+    ctx.strokeStyle = "#2D2DB5"; ctx.lineWidth = 1.5; ctx.strokeRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = "#111"; ctx.font = "bold 14px Arial"; ctx.textAlign = "center";
+    if (TW < 560) { ctx.font = "bold 11px Arial"; ctx.fillText(NAME[st], r.x + r.w / 2, r.y - 18); ctx.fillText(String(counts[i]), r.x + r.w / 2, r.y - 5); }
+    else ctx.fillText(`${NAME[st]} ${counts[i]}`, r.x + r.w / 2, r.y - 8); });
+  const k = 1 - Math.pow(0.003, dt);
+  dots.forEach(d => { d.x += (d.tx - d.x) * k; d.y += (d.ty - d.y) * k; ctx.fillStyle = COL[DISP[d.s]]; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill(); });
+}
+
+/* ---------------- stock-and-flow diagram ---------------- */
+function drawSFD() {
+  const p = pAt(S.t), X = { NR: 70, NP: 270, RP: 470, CR: 670, M: 870 }, Y = 120, w = 110, h = 74;
+  const rate = (a, b) => MODEL.edges.reduce((s, e, k) => s + (D_OF(SI[e[0]]) === DISP.indexOf(a) && D_OF(SI[e[1]]) === DISP.indexOf(b) && e[0] !== e[1] ? q[k] : 0), 0);
+  let s = `<defs><marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L10,5L0,10z" fill="#fff" stroke="#2D2DB5"/></marker>
+    <marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L10,5L0,10z" fill="#E0257A"/></marker></defs>`;
+  const pipe = (x1, y1, x2, y2) => `<path d="M${x1},${y1} L${x2},${y2}" stroke="#2D2DB5" stroke-width="7" fill="none" marker-end="url(#pa)"/><path d="M${x1},${y1} L${x2 - 6},${y2}" stroke="#fff" stroke-width="4" fill="none"/>`;
+  const valve = (x, y, label, val, up) => `<path d="M${x - 9},${y - 8} L${x + 9},${y + 8} M${x - 9},${y + 8} L${x + 9},${y - 8}" stroke="#2D2DB5" stroke-width="1.5"/><line x1="${x}" y1="${y - 8}" x2="${x}" y2="${y - 18}" stroke="#2D2DB5" stroke-width="1.5"/><rect x="${x - 6}" y="${y - 21}" width="12" height="4" fill="#2D2DB5"/>
+    <circle cx="${x}" cy="${y + (up ? -36 : 36)}" r="9" fill="#fff" stroke="#2D2DB5" stroke-width="1.5"/>
+    <path d="M${x + 7},${y + (up ? -30 : 30)} Q${x + 14},${y + (up ? -18 : 18)} ${x + 4},${y + (up ? -10 : 10)}" stroke="#E0257A" stroke-width="1.5" fill="none" marker-end="url(#ca)"/>
+    <text x="${x}" y="${y + (up ? -52 : 60)}" text-anchor="middle" font-size="15" fill="#2323C8">${label}</text>
+    <text x="${x}" y="${y + (up ? -66 : 74)}" text-anchor="middle" font-size="13" fill="#333">q = ${val < 0.01 ? val.toFixed(3) : val.toFixed(2)} / yr</text>`;
+  // forward flows on the main line
+  const fwd = [["NR", "NP", "meeting"], ["NP", "RP", "spark"], ["RP", "CR", "dating"], ["CR", "M", "marrying"]];
+  fwd.forEach(([a, b, lab]) => { const x1 = X[a] + w, x2 = X[b], mx = (x1 + x2) / 2; s += pipe(x1, Y + 20, x2, Y + 20) + valve(mx, Y + 20, lab, rate(a, b), true); });
+  // backward flows under the boxes
+  const back = [["NP", "NR", "drift", 1], ["RP", "NP", "fade", 1], ["RP", "NR", "lose touch", 2], ["CR", "NR", "break up", 3], ["M", "NR", "divorce or death", 4]];
+  back.forEach(([a, b, lab, lane]) => {
+    const yb = Y + h + 30 + lane * 34, xa = X[a] + w * (lane === 2 ? 0.18 : 0.3), xb = X[b] + w * (0.38 + 0.13 * lane);
+    s += `<path d="M${xa},${Y + h} L${xa},${yb} L${xb},${yb} L${xb},${Y + h + 8}" stroke="#2D2DB5" stroke-width="7" fill="none"/><path d="M${xa},${Y + h} L${xa},${yb} L${xb},${yb} L${xb},${Y + h + 12}" stroke="#fff" stroke-width="4" fill="none"/>
+      <path d="M${xb - 6},${Y + h + 12} L${xb},${Y + h + 2} L${xb + 6},${Y + h + 12}z" fill="#fff" stroke="#2D2DB5"/>`;
+    const vx = (xa + xb) / 2; s += `<path d="M${vx - 9},${yb - 8} L${vx + 9},${yb + 8} M${vx - 9},${yb + 8} L${vx + 9},${yb - 8}" stroke="#2D2DB5" stroke-width="1.5"/>
+      <text x="${vx}" y="${yb - 12}" text-anchor="middle" font-size="14" fill="#2323C8" paint-order="stroke" stroke="#fff" stroke-width="4">${lab} · q = ${rate(a, b).toFixed(rate(a, b) < 0.01 ? 3 : 2)} / yr</text>`;
+  });
+  // stocks with fill level
+  DISP.forEach((st, i) => { const x = X[st], f = p[i];
+    s += `<rect x="${x}" y="${Y}" width="${w}" height="${h}" fill="#fff" stroke="#2D2DB5" stroke-width="1.5"/>
+      <rect x="${x + 1}" y="${Y + h - (h - 2) * f - 1}" width="${w - 2}" height="${(h - 2) * f}" fill="${COL[st]}" opacity=".55"/>
+      <text x="${x + w / 2}" y="${Y - 8}" text-anchor="middle" font-size="16" fill="#2323C8">${NAME[st]} (${st})</text>
+      <text x="${x + w / 2}" y="${Y + 44}" text-anchor="middle" font-size="20" font-weight="bold" fill="#111">${Math.round(f * 100)}%</text>`; });
+  $("sfd").innerHTML = s;
+}
+
+/* ---------------- controls ---------------- */
+function slider(d, box) {
+  const w = document.createElement("div"); w.className = "sl";
+  const span = d.max - d.min;
+  w.innerHTML = `<div class="cap">${d.cap}</div><input class="val" id="v-${d.id}" aria-label="${d.cap} value" value="${d.def}" readonly>
+    <div class="track"><div class="ticks">${d.ticks.map(t => `<span>${t}</span>`).join("")}</div>
+    <input type="range" id="s-${d.id}" min="${d.min}" max="${d.max}" step="${d.step}" value="${d.def}" aria-label="${d.cap}"></div>`;
+  box.appendChild(w); S.v[d.id] = d.def;
+  const r = w.querySelector("input[type=range]");
+  r.addEventListener("input", () => { S.v[d.id] = +r.value; $("v-" + d.id).value = r.value; $("v-" + d.id).title = d.id === "rel_quality" ? QUAL[r.value] : ""; recompute(); replay(); });
+}
+function buildControls() {
+  $("starts").innerHTML = DISP.map(s => `<label><input type="radio" name="start" id="start-${s}" value="${s}" ${s === S.start ? "checked" : ""}><i class="sw" style="background:${COL[s]}"></i>${NAME[s]}</label>`).join("");
+  document.querySelectorAll("input[name=start]").forEach(r => r.addEventListener("change", () => { S.start = r.value; syncBoxes(); recompute(); replay(); }));
+  SL.early.forEach(d => slider(d, $("box-early"))); SL.late.forEach(d => slider(d, $("box-late")));
+  document.querySelectorAll("input[name=cohab]").forEach(r => r.addEventListener("change", () => { S.cohab = +r.value; recompute(); replay(); }));
+  document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => act(b.dataset.act)));
+  const setSpeed = v => { S.speed = v; ["speed", "speed2"].forEach(id => { $(id).value = v; $(id + "-out").textContent = v.toFixed(2).replace(/0$/, ""); }); };
+  $("speed").addEventListener("input", e => setSpeed(+e.target.value)); $("speed2").addEventListener("input", e => setSpeed(+e.target.value));
+  setSpeed(0.5);
+  const scrub = e => { S.live = false; syncLive(); S.t = +e.target.value; S.shown = Math.max(S.shown, S.t); placeDots(false); render(); };
+  $("time").addEventListener("input", scrub); $("time2").addEventListener("input", scrub);
+  const tabs = ["intro", "sim", "sd", "markov", "refs"];
+  tabs.forEach(tb => $("tab-" + tb).addEventListener("click", () => {
+    tabs.forEach(o => { $("tab-" + o).setAttribute("aria-selected", o === tb ? "true" : "false"); $("page-" + o).hidden = o !== tb; });
+    if (tb === "sim") requestAnimationFrame(sizeTanks); render();
+  }));
+}
+function resetRun() { S.live = false; S.t = 0; S.shown = 0; placeDots(true); syncLive(); }
+/* after any change, replay the ten years from the start so the effect is visible as motion */
+function replay() { S.t = 0; S.shown = 0; placeDots(true); S.live = true; syncLive(); render(); }
+function act(a) {
+  if (a === "run") { S.t = 0; S.shown = 0; placeDots(true); S.live = true; }               // play from year 0
+  if (a === "live") { if (S.t >= YEARS) { S.t = 0; S.shown = 0; placeDots(true); } S.live = !S.live; }   // pause / resume
+  if (a === "reset") resetRun();
+  syncLive();
+  render();
+}
+function syncLive() { document.querySelectorAll('[data-act="live"]').forEach(b => b.lastChild.textContent = S.live ? "Pause" : "Live"); }
+function render() {
+  document.querySelectorAll("svg.graph").forEach(drawGraph);
+  ["time", "time2"].forEach(id => { $(id).value = S.t; $(id + "-out").textContent = S.t.toFixed(1) + " yr"; });
+  drawSFD();
+}
+function baseTable() {
+  const qa = rates(new Array(MODEL.names.length).fill(0), 1), qe = rates(new Array(MODEL.names.length).fill(0), 0);
+  const rows = [["No tie → friends", 0, qe], ["No tie → potential", 1, qe], ["Friends → no tie", 3, qe], ["Friends → potential", 4, qe], ["Potential → friends", 7, qe], ["Potential → no tie", 6, qe], ["Potential → couple", 8, qe], ["Couple → married", 12, qa], ["Couple → no tie (breakup)", 9, qa], ["Married → no tie (divorce)", 14, qa]];
+  $("base").innerHTML = `<tr><th>Transition</th><th>Rate per year</th></tr>` + rows.map(([n, k, v]) => `<tr><td>${n}</td><td class="n">${v[k].toFixed(3)}</td></tr>`).join("");
+}
+
+/* ---------------- loop ---------------- */
+let last = null;
+function frame(ts) {
+  const dt = last === null ? 0 : Math.min(0.1, (ts - last) / 1000); last = ts;
+  if (S.live) { S.t = Math.min(YEARS, S.t + dt * S.speed); S.shown = Math.max(S.shown, S.t); placeDots(false); render(); if (S.t >= YEARS) { S.live = false; syncLive(); } }
+  drawTanks(dt); requestAnimationFrame(frame);
+}
+buildControls(); syncBoxes(); drawLoop(); drawLegends(); baseTable(); recompute();
+new ResizeObserver(sizeTanks).observe(cv);
+window.addEventListener("resize", render);
+replay();   // the page opens playing: ten years in twenty seconds at the default speed
+requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>

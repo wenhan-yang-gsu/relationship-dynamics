@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.log
+.venv/
+# raw survey files are not redistributed: see raw_data/README.md
+raw_data/*/raw/
+raw_data/*/data/
+raw_data/*/documentation/
+raw_data/*/source_archives/
+raw_data/HCMST/README.md

@@ -1,0 +1,71 @@
+{
+  "eastwick": {
+    "raw_rows": 7179,
+    "participants": 208,
+    "pairs": 1065
+  },
+  "hcmst": {
+    "raw_respondents": 4002,
+    "respondents_with_partner": 3009,
+    "respondents_without_partner_excluded": 993,
+    "w6_rows": 640
+  },
+  "rows": 25233,
+  "columns": 182,
+  "by_source_state": {
+    "Eastwick": {
+      "CR": 162,
+      "M": 0,
+      "NP": 3376,
+      "NR": 758,
+      "RP": 2667,
+      "missing": 216
+    },
+    "HCMST": {
+      "CR": 2649,
+      "M": 7488,
+      "NP": 0,
+      "NR": 679,
+      "RP": 0,
+      "missing": 7238
+    }
+  },
+  "by_source_split_persons": {
+    "Eastwick": {
+      "test": 42,
+      "train": 166
+    },
+    "HCMST": {
+      "test": 602,
+      "train": 2407
+    }
+  },
+  "cv_fold_persons": {
+    "0.0": {
+      "Eastwick": 33,
+      "HCMST": 482
+    },
+    "1.0": {
+      "Eastwick": 37,
+      "HCMST": 478
+    },
+    "2.0": {
+      "Eastwick": 32,
+      "HCMST": 483
+    },
+    "3.0": {
+      "Eastwick": 32,
+      "HCMST": 482
+    },
+    "4.0": {
+      "Eastwick": 32,
+      "HCMST": 482
+    }
+  },
+  "missing_reasons": {
+    "Eastwick/no_status_answer_this_wave": 216,
+    "HCMST/conflicting_raw_answers": 1,
+    "HCMST/no_response_or_not_in_this_wave": 5293,
+    "HCMST/not_followed_after_relationship_ended": 1944
+  }
+}
