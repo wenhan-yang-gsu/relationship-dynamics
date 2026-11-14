@@ -89,13 +89,24 @@ def cv_supplement():
     def loss(cols):
         p = M[cols].to_numpy(); return -np.log(np.clip(p[np.arange(len(M)), y], 1e-12, None))
     M["l_final"], M["l_none"], M["l_su"] = loss(["p0", "p1", "p2"]), loss(["p0_none", "p1_none", "p2_none"]), loss(["p0_su", "p1_su", "p2_su"])
+    hh = C.load().drop_duplicates("pid").set_index("pid").household
+    M["household"] = M.pid.map(hh)
+    rng = np.random.default_rng(20261111)
     out = {}
     for (lm, h), g in M.groupby(["landmark", "h"]):
         gw = g.w.to_numpy(); yy = g.person_y.astype(int).to_numpy()
         lf, ln, ls = (float(np.average(g[c], weights=gw)) for c in ("l_final", "l_none", "l_su"))
+        H_ = np.unique(g.household.to_numpy()); hi = np.searchsorted(H_, g.household.to_numpy())
+        lfb, lnb, lsb = [], [], []
+        for _ in range(1000):
+            cnt = np.bincount(rng.integers(0, len(H_), len(H_)), minlength=len(H_)); ww = gw * cnt[hi]
+            lfb.append(np.average(g.l_final, weights=ww)); lnb.append(np.average(g.l_none, weights=ww)); lsb.append(np.average(g.l_su, weights=ww))
+        lfb, lnb, lsb = map(np.array, (lfb, lnb, lsb))
+        q = lambda a: [float(np.percentile(a, 5)), float(np.percentile(a, 95))]
         out[f"{lm}|{h}"] = dict(n=int(len(g)), loss_final=lf, loss_state_known_baseline=ln, loss_stage_unknown_baseline=ls,
-                               skill_vs_stage_unknown=1 - lf / ls, skill_vs_state_known=1 - lf / ln,
-                               share_of_total_skill_from_state=(ls - ln) / (ls - lf) if ls > lf else None,
+                               skill_vs_stage_unknown=1 - lf / ls, skill_vs_stage_unknown_ci90=q(1 - lfb / lsb),
+                               skill_vs_state_known=1 - lf / ln, skill_vs_state_known_ci90=q(1 - lfb / lnb),
+                               share_of_total_skill_from_state=(ls - ln) / (ls - lf), share_ci90=q((lsb - lnb) / (lsb - lfb)),
                                reliability=reliability(g[["p0", "p1", "p2"]].to_numpy(), yy, gw))
         print(lm, h, "skill vs stage-unknown", round(out[f"{lm}|{h}"]["skill_vs_stage_unknown"], 4), "vs state-known", round(out[f"{lm}|{h}"]["skill_vs_state_known"], 4), flush=True)
     json.dump(out, open(f"{OUT}/cv/supplement_cv.json", "w"), indent=1)
@@ -120,6 +131,32 @@ def class_outcomes():
     T = pd.DataFrame(rows); T.to_csv(f"{OUT}/class_outcomes_10y.csv", index=False); print(T.round(3).to_string())
 
 
+def class_agreement():
+    import structures as LT
+    from chain import Params
+    def load(k):
+        ck = torch.load(f"{cv.OUT}/phase_lat_f{k}.pt", weights_only=False)
+        sp = cv.make_space(ck["cfg"]); xc, st = ck["xcols"], ck["stats"]
+        par = Params(sp, p=len(xc) * 2, n_src=3, init=ck["par"]); par.age_range = ck["age_range"]
+        return LT.Mixture(par, ck["G"], delta=ck["delta"], W=ck["W"]), sp, xc, st, np.asarray(torch.as_tensor(ck["delta"]).detach().numpy())
+    A = C.load(); A = A[A.split.isin(["train", "valid"])]
+    O = cv.origins(A, "nlsy2008").reset_index(drop=True)
+    m0, sp0, xc0, st0, d0 = load(-1)
+    full = np.vstack([np.zeros(d0.shape[1]), d0])
+    post0 = LT.origin_posterior(m0, A, O, sp0, xc0, st0); modal0 = post0.argmax(1)
+    out = {"final_shares": np.bincount(modal0, minlength=3).tolist()}
+    for k in range(5):
+        m, sp, xc, st, d = load(k)
+        fk = np.vstack([np.zeros(d.shape[1]), d])
+        mapping = [int(np.argmin(((full - row) ** 2).sum(1))) for row in fk]
+        post = LT.origin_posterior(m, A, O, sp, xc, st); modal = np.array([mapping[i] for i in post.argmax(1)])
+        agree = float((modal == modal0).mean())
+        pe = float(sum((modal == c).mean() * (modal0 == c).mean() for c in range(3)))
+        out[f"fold{k}"] = dict(G=int(m.G), class_map=mapping, agreement=agree, kappa=(agree - pe) / (1 - pe), shares=np.bincount(modal, minlength=3).tolist())
+        print(k, out[f"fold{k}"], flush=True)
+    json.dump(out, open(f"{OUT}/class_agreement.json", "w"), indent=1)
+
+
 def nlsy79_calibration():
     d = pd.read_csv(f"{OUT}/nlsy79/structures_79_pairs.csv")
     out = {}
@@ -131,4 +168,4 @@ def nlsy79_calibration():
 
 
 if __name__ == "__main__":
-    {"nlsy79": nlsy79_structures, "cv": cv_supplement, "classes": class_outcomes, "calib79": nlsy79_calibration}[sys.argv[1]]()
+    {"nlsy79": nlsy79_structures, "cv": cv_supplement, "classes": class_outcomes, "calib79": nlsy79_calibration, "agreement": class_agreement}[sys.argv[1]]()

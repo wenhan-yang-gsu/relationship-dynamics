@@ -125,6 +125,42 @@ def build_data():
     pd.DataFrame(rows).to_csv(f"{OUT}/fig3_nlsy79.csv", index=False)
     print("written:", *sorted(__import__("os").listdir(OUT)))
 
+    S5 = json.load(open(f"{ROOT}/runs/cv/supplement_cv.json"))
+    rows = []
+    for k, v in S5.items():
+        lm, h = k.split("|")
+        rows.append(dict(landmark=lm, h=int(h), skill_demo=v["skill_vs_stage_unknown"], skill_demo_lo=v["skill_vs_stage_unknown_ci90"][0], skill_demo_hi=v["skill_vs_stage_unknown_ci90"][1],
+                         skill_state=v["skill_vs_state_known"], skill_state_lo=v["skill_vs_state_known_ci90"][0], skill_state_hi=v["skill_vs_state_known_ci90"][1],
+                         share_state=v["share_of_total_skill_from_state"], share_lo=v["share_ci90"][0], share_hi=v["share_ci90"][1]))
+    pd.DataFrame(rows).to_csv(f"{OUT}/fig5_skill_components.csv", index=False)
+    I = json.load(open(f"{ROOT}/runs/info_decomp/summary.json"))["by_cell"]
+    rows = []
+    for k, v in I.items():
+        lm, h = k.split("|"); tot = v["loss_none"] - v["loss_all"]
+        for g in ("feelings", "background", "family", "history"):
+            rows.append(dict(landmark=lm, h=int(h), source=g, phi=v["phi"][g], lo=v["phi_ci90"][g][0], hi=v["phi_ci90"][g][1], total=tot))
+    pd.DataFrame(rows).to_csv(f"{OUT}/fig5_shapley.csv", index=False)
+    import torch
+    from chain import KINDS
+    kinds = [k for k in KINDS if not k.endswith("X")]
+    def mult(k):
+        ck = torch.load(f"{ROOT}/runs/cv/phase_lat_f{k}.pt", weights_only=False)
+        return np.exp(torch.as_tensor(ck["delta"]).detach().numpy()), int(ck["G"])
+    fin, _ = mult(-1); folds = [mult(k)[0] for k in (0, 1, 3)]
+    rows = []
+    for g, name in ((0, "settled"), (1, "mobile")):
+        for kind in kinds:
+            i = KINDS.index(kind); vals = [f[g, i] for f in folds]
+            rows.append(dict(cls=name, kind=kind, mult=float(fin[g, i]), fold_min=float(min(vals + [fin[g, i]])), fold_max=float(max(vals + [fin[g, i]]))))
+    pd.DataFrame(rows).to_csv(f"{OUT}/fig6_multipliers.csv", index=False)
+    pd.read_csv(f"{ROOT}/runs/class_outcomes_10y.csv").to_csv(f"{OUT}/fig6_outcomes.csv", index=False)
+    T79 = json.load(open(f"{ROOT}/runs/nlsy79/structures_79.json"))
+    rows = []
+    for lm, cells in T79.items():
+        for h, v in cells.items():
+            rows.append(dict(landmark=lm, h=int(h), skill=v["skill"]["base79"], skill_lo=v["skill_ci90"]["base79"][0], skill_hi=v["skill_ci90"]["base79"][1]))
+    pd.DataFrame(rows).to_csv(f"{OUT}/fig3_earlier_model.csv", index=False)
+
 def fig1():
 
     S = pd.read_csv(DATA / "fig1_skill_cv.csv")
@@ -231,19 +267,22 @@ def fig3():
     gs = fig.add_gridspec(2, 2, width_ratios=[1.15, 1], height_ratios=[1, 1], wspace=0.42, hspace=0.6, left=0.075, right=0.985, bottom=0.25, top=0.92)
     axa = fig.add_subplot(gs[:, 0]); axb = fig.add_subplot(gs[0, 1]); axc = fig.add_subplot(gs[1, 1])
 
+    E3 = pd.read_csv(DATA / "fig3_earlier_model.csv")
     for lm, col in (("L1", CHAIN), ("L2", GBM)):
         d = D[D.landmark == lm].sort_values("h")
+        e3 = E3[E3.landmark == lm].sort_values("h")
+        axa.plot(e3.h, e3.skill * 100, ":", color=col, lw=1.1, marker="o", ms=3.0, mfc="white", label=f"{LAB[lm]}, earlier main model")
         axa.fill_between(d.h, d.skill_lo * 100, d.skill_hi * 100, color=col, alpha=0.16, lw=0)
-        axa.plot(d.h, d.skill * 100, "-", color=col, lw=1.3, label=LAB[lm])
+        axa.plot(d.h, d.skill * 100, "-", color=col, lw=1.3, label=f"{LAB[lm]}, final structure")
         p = d[d.primary_horizon]; e = d[~d.primary_horizon]
         axa.plot(p.h, p.skill * 100, "o", color=col, ms=3.6)
         axa.plot(e.h, e.skill * 100, "o", color=col, ms=3.6, mfc="white")
     axa.axhline(0, color=BASE, lw=0.6)
     axa.set_xlabel("Forecast horizon (years)"); axa.set_ylabel("Skill over baseline (%)")
     axa.set_xticks([1, 5, 10, 14, 20, 30, 33, 39]); axa.set_xticklabels(["1", "5", "10", "14", "20", "30", "33", "39"])
-    axa.set_ylim(-3, 65)
-    axa.legend(loc="upper right", handlelength=2.0, borderaxespad=0.2)
-    axa.text(7, 36, "filled: primary horizons\nopen: beyond any training follow-up", fontsize=6, ha="left", va="bottom", color="#272727")
+    axa.set_ylim(-4, 65)
+    axa.legend(loc="upper right", handlelength=2.2, borderaxespad=0.2, fontsize=6)
+    axa.text(7, 30, "filled: primary horizons\nopen: beyond any training follow-up", fontsize=6, ha="left", va="bottom", color="#272727")
 
     names = {"gbmT": ("Gradient boosting", GBM), "logitT": ("Logistic regression", LOGIT), "phd": ("Pooled-horizon boosting", PHD),
              "itm_gbm": ("Iterated boosting transitions", ITM)}
@@ -315,6 +354,94 @@ def fig4():
     fig.savefig(OUT / "fig4.svg"); fig.savefig(OUT / "fig4.pdf"); fig.savefig(OUT / "fig4.png", dpi=600); fig.savefig(OUT / "fig4.tiff", dpi=600)
     print("saved", OUT / "fig4")
 
+
+def fig5():
+    S = pd.read_csv(DATA / "fig5_skill_components.csv"); P = pd.read_csv(DATA / "fig5_shapley.csv")
+    fig = plt.figure(figsize=(7.2, 3.1))
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.25, 1, 1.25], wspace=0.5, left=0.07, right=0.985, bottom=0.36, top=0.92)
+    axa, axb, axc = (fig.add_subplot(gs[0, i]) for i in range(3))
+    for lm, col, mk in (("nlsy2002", CHAIN, "o"), ("nlsy2008", GBM, "s"), ("hcmst2017", PHD, "^")):
+        d = S[S.landmark == lm].sort_values("h")
+        axa.fill_between(d.h, d.skill_demo_lo * 100, d.skill_demo_hi * 100, color=col, alpha=0.16, lw=0)
+        axa.plot(d.h, d.skill_demo * 100, "-", marker=mk, color=col, lw=1.3, ms=3.4, label=f"{LM[lm]}, demographic baseline")
+        axa.fill_between(d.h, d.skill_state_lo * 100, d.skill_state_hi * 100, color=col, alpha=0.16, lw=0)
+        axa.plot(d.h, d.skill_state * 100, "--", marker=mk, color=col, lw=1.1, ms=3.4, mfc="white", label=f"{LM[lm]}, state-aware baseline")
+        axb.errorbar(d.h, d.share_state * 100, yerr=[(d.share_state - d.share_lo) * 100, (d.share_hi - d.share_state) * 100], fmt="-" , marker=mk, color=col, lw=1.1, ms=3.4, elinewidth=0.7, capsize=0)
+    axa.axhline(0, color=BASE, lw=0.6)
+    axa.set_xlabel("Forecast horizon (years)"); axa.set_ylabel("Skill of the final structure (%)")
+    axa.set_xticks([1, 3, 5, 10, 14, 20]); axa.set_ylim(-2, 65)
+    h_, l_ = axa.get_legend_handles_labels()
+    fig.legend(h_, l_, loc="lower center", bbox_to_anchor=(0.42, 0.0), ncol=3, handlelength=2.0, columnspacing=1.0, fontsize=6, frameon=False)
+    axb.set_xlabel("Forecast horizon (years)"); axb.set_ylabel("Share of skill from knowing\nthe current state (%)")
+    axb.set_xticks([1, 3, 5, 10, 14, 20]); axb.set_ylim(0, 105)
+    srcs = [("background", "Demographic background", ITM), ("family", "Family background", PHD), ("feelings", "Relationship feelings", GBM), ("history", "Partnership history", LOGIT)]
+    x = np.arange(len(CELL_ORDER)); bottom_pos = np.zeros(len(CELL_ORDER)); bottom_neg = np.zeros(len(CELL_ORDER))
+    for g, lab, col in srcs:
+        vals = np.array([P[(P.landmark == lm) & (P.h == h) & (P.source == g)].phi.iloc[0] for lm, h in CELL_ORDER])
+        pos = np.clip(vals, 0, None); neg = np.clip(vals, None, 0)
+        axc.bar(x, pos, 0.7, bottom=bottom_pos, color=col, lw=0, label=lab); bottom_pos += pos
+        axc.bar(x, neg, 0.7, bottom=bottom_neg, color=col, lw=0); bottom_neg += neg
+    axc.axhline(0, color="#272727", lw=0.6)
+    axc.set_xticks(x); axc.set_xticklabels([str(h) for _, h in CELL_ORDER], fontsize=6)
+    axc.set_xlabel("Forecast horizon (years)", labelpad=24)
+    for lab, (i0, i1) in (("From 2002", (0, 3)), ("From 2008", (4, 7)), ("HCMST", (8, 9))):
+        axc.text((i0 + i1) / 2, -0.16, lab, transform=axc.get_xaxis_transform(), ha="center", va="top", fontsize=6)
+        axc.plot([i0 - 0.35, i1 + 0.35], [-0.13, -0.13], transform=axc.get_xaxis_transform(), color="#272727", lw=0.6, clip_on=False)
+    axc.set_ylabel("Loss reduction attributed\nto each source (nats)")
+    axc.set_ylim(top=0.235)
+    axc.legend(loc="upper right", handlelength=1.0, borderaxespad=0.2, fontsize=5.8)
+    panel_label(fig, axa, "a", dx_pt=-30); panel_label(fig, axb, "b", dx_pt=-30); panel_label(fig, axc, "c", dx_pt=-36)
+    require_matplotlib_panel_alignment(fig, json_out=str(OUT / "fig5.alignment.json"), overlay_svg=str(OUT / "fig5.alignment.svg"),
+                                       tolerance_pt=1.5, gutter_tolerance_pt=1.5, strict=True, exemptions=[{"panels": ["a", "c"], "checks": ["panel-width"], "reason": "outer panels wider by design"}])
+    fig.savefig(OUT / "fig5.svg"); fig.savefig(OUT / "fig5.pdf"); fig.savefig(OUT / "fig5.png", dpi=600); fig.savefig(OUT / "fig5.tiff", dpi=600)
+    print("saved", OUT / "fig5")
+
+
+def fig6():
+    Mu = pd.read_csv(DATA / "fig6_multipliers.csv"); Oc = pd.read_csv(DATA / "fig6_outcomes.csv")
+    fig = plt.figure(figsize=(7.2, 2.7))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.1, 1], wspace=0.42, left=0.11, right=0.985, bottom=0.27, top=0.9)
+    axa, axb = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])
+    kinds = list(Mu.kind.unique()); y = np.arange(len(kinds))[::-1]
+    for j, (cls, lab, col) in enumerate((("settled", "Settled class", PHD), ("mobile", "Mobile class", GBM))):
+        d = Mu[Mu.cls == cls].set_index("kind").loc[kinds]
+        off = (j - 0.5) * 0.3
+        axa.errorbar(d.mult, y + off, xerr=[d.mult - d.fold_min, d.fold_max - d.mult], fmt="o", color=col, ms=3.2, elinewidth=0.8, capsize=0, label=lab)
+    axa.axvline(1, color="#272727", lw=0.6)
+    axa.set_xscale("log"); axa.set_xticks([0.03, 0.1, 0.3, 1, 3, 10]); axa.set_xticklabels(["0.03", "0.1", "0.3", "1", "3", "10"])
+    axa.set_yticks(y); axa.set_yticklabels([k.replace(">", " \u2192 ") for k in kinds])
+    axa.set_xlabel("Intensity relative to the intermediate class"); axa.set_ylim(-0.7, len(kinds) - 0.3)
+    ha_, la_ = axa.get_legend_handles_labels()
+    fig.legend(ha_, la_, loc="lower center", bbox_to_anchor=(0.33, 0.0), ncol=2, handlelength=1.2, columnspacing=1.2, fontsize=6.5, frameon=False)
+    d = Oc[(Oc.landmark == "nlsy2008")].copy()
+    groups = [("S", "Single"), ("D", "Dating"), ("C", "Cohabiting"), ("M", "Married")]
+    cols = {1: ITM, 2: PHD, 3: GBM}; names = {1: "Intermediate", 2: "Settled", 3: "Mobile"}
+    outcome = {"S": ("obs_none", "pred_none", "no partner"), "D": ("obs_married", "pred_married", "married"), "C": ("obs_married", "pred_married", "married"), "M": ("obs_married", "pred_married", "married")}
+    xpos = []; labels = []; k = 0
+    for st, lab in groups:
+        oc, pc, what = outcome[st]
+        for c in (1, 2, 3):
+            r = d[(d.origin_state == st) & (d.modal_class == c)]
+            if len(r) == 0:
+                continue
+            r = r.iloc[0]; p = r[oc]; n = r.n; z = 1.96
+            lo = (p + z * z / (2 * n) - z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / (1 + z * z / n)
+            hi = (p + z * z / (2 * n) + z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / (1 + z * z / n)
+            axb.errorbar(k, p * 100, yerr=[[(p - lo) * 100], [(hi - p) * 100]], fmt="o", color=cols[c], ms=3.4, elinewidth=0.8, capsize=0, label=names[c] if st == "S" else None, zorder=3)
+            axb.plot(k, r[pc] * 100, "_", color=cols[c], ms=9, mew=1.4, zorder=2)
+            xpos.append(k); labels.append(f"{lab}\n{what}" if c == (2 if st == "S" else 1) else ""); k += 1
+        k += 0.8
+    axb.set_xticks(xpos); axb.set_xticklabels(labels, fontsize=6)
+    axb.set_ylabel("Realized share ten years later (%)"); axb.set_ylim(0, 100)
+    axb.plot([], [], "_", color="#272727", ms=9, mew=1.4, label="Model forecast")
+    hb_, lb_ = axb.get_legend_handles_labels()
+    fig.legend(hb_, lb_, loc="lower center", bbox_to_anchor=(0.78, 0.0), ncol=4, handlelength=1.2, columnspacing=1.0, fontsize=6.5, frameon=False)
+    panel_label(fig, axa, "a", dx_pt=-40); panel_label(fig, axb, "b", dx_pt=-30)
+    require_matplotlib_panel_alignment(fig, json_out=str(OUT / "fig6.alignment.json"), overlay_svg=str(OUT / "fig6.alignment.svg"),
+                                       tolerance_pt=1.5, gutter_tolerance_pt=1.5, strict=True, exemptions=[{"panels": ["a"], "checks": ["panel-width"], "reason": "hero panel a is wider by design"}])
+    fig.savefig(OUT / "fig6.svg"); fig.savefig(OUT / "fig6.pdf"); fig.savefig(OUT / "fig6.png", dpi=600); fig.savefig(OUT / "fig6.tiff", dpi=600)
+    print("saved", OUT / "fig6")
+
 if __name__ == "__main__":
-    for f in (build_data, fig1, fig2, fig3, fig4):
+    for f in (build_data, fig1, fig2, fig3, fig4, fig5, fig6):
         f()
