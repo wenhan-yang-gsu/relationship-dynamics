@@ -4,6 +4,8 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+if os.environ.get("NATURE_FIGURE_SCRIPTS"):
+    sys.path.insert(0, os.environ["NATURE_FIGURE_SCRIPTS"])
 try:
     from audit_panel_alignment import require_matplotlib_panel_alignment
 except ImportError:
