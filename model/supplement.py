@@ -85,7 +85,7 @@ def cv_supplement():
     F, N, S = load("phase_lat"), load("none"), load("none_su")
     key = ["landmark", "pid", "h"]
     M = F.merge(N[key + ["p0", "p1", "p2"]], on=key, suffixes=("", "_none")).merge(S[key + ["p0", "p1", "p2"]].rename(columns={"p0": "p0_su", "p1": "p1_su", "p2": "p2_su"}), on=key)
-    y = M.person_y.astype(int).to_numpy(); w = M.w.to_numpy()
+    y = M.person_y.astype(int).to_numpy()
     def loss(cols):
         p = M[cols].to_numpy(); return -np.log(np.clip(p[np.arange(len(M)), y], 1e-12, None))
     M["l_final"], M["l_none"], M["l_su"] = loss(["p0", "p1", "p2"]), loss(["p0_none", "p1_none", "p2_none"]), loss(["p0_su", "p1_su", "p2_su"])
