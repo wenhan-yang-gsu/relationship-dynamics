@@ -1,4 +1,4 @@
-# Source tables and the four figures: skill by horizon, direct learners and truncation, NLSY79 transport, simulation.
+# Source tables and the six figures: skill by horizon, direct learners and truncation, NLSY79 transport, simulation, skill composition, latent classes.
 import os, sys
 from pathlib import Path
 import matplotlib as mpl
